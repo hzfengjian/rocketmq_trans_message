@@ -3,9 +3,11 @@
 
 # 使用方法:
 # 1.rocketmq配置文件中加入以下几个配置:
+```
 jdbcURL=jdbc:mysql://xxxxx/xxxxx?useUnicode=true&characterEncoding=utf8&noAccessToProcedureBodies=true
 jdbcUser=xxxxx
 jdbcPassword=xxxxxx
+```
 
 # 2.打包
 mvn -Dmaven.test.skip=true -Dcheckstyle.skip=true clean package install assembly:assembly -P release-all -U
