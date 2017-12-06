@@ -16,3 +16,6 @@ mvn -Dmaven.test.skip=true -Dcheckstyle.skip=true clean package install assembly
 TransactionProducer 事务发送者
 TransactionConsumer 事务消费者
 
+
+***如果大家有任何的问题可以加我的QQ:309749236,或者直接issues,我看见了会给你们解答***
+
