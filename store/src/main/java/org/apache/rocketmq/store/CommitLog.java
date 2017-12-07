@@ -205,11 +205,6 @@ public class CommitLog {
             this.mappedFileQueue.setCommittedWhere(processOffset);
             this.mappedFileQueue.truncateDirtyFiles(processOffset);
         }
-
-        //重新dispatch 事务消息
-        if (defaultMessageStore.getMessageStoreConfig().isTransactionLogInDB()) {
-
-        }
     }
 
     public DispatchRequest checkMessageAndReturnSize(java.nio.ByteBuffer byteBuffer, final boolean checkCRC) {
