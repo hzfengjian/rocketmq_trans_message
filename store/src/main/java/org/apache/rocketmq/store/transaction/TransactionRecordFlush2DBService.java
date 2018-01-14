@@ -188,6 +188,7 @@ public class TransactionRecordFlush2DBService extends ServiceThread {
                 break;
             }
             try {
+                long transactionOffset = -1L;
                 //数据处理
                 if (prepareTrs == null && confirmTrs == null) {
                     prepareTrs = new LinkedHashMap<Long, TransactionRecord>();
@@ -210,20 +211,20 @@ public class TransactionRecordFlush2DBService extends ServiceThread {
                                 }
                             case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                             case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
-                                if (this.minTransOffset.get() < request.getCommitLogOffset()) {
+                                if (this.maxTransOffset.get() < request.getCommitLogOffset()) {
                                     if (prepareTrs.containsKey(request.getPreparedTransactionOffset())) {
                                         prepareTrs.remove(request.getPreparedTransactionOffset());
                                     } else {
                                         confirmTrs.put(request.getPreparedTransactionOffset(), null);
                                     }
                                 } else {
-                                    log.info("[COMMIT] request ignore offset =" + request.getCommitLogOffset());
+                                    log.info("[COMMIT] request ignore offset =" + request.getCommitLogOffset()
+                                            + ",isCommitMessge=" + (tranType == MessageSysFlag.TRANSACTION_COMMIT_TYPE));
                                 }
                                 break;
                         }
                     }
-                    long transactionOffset = requests.requestlist.get(requests.requestlist.size() - 1).getCommitLogOffset();
-                    transactionOffsetConifgService.putOffset(transactionOffset);
+                    transactionOffset = requests.requestlist.get(requests.requestlist.size() - 1).getCommitLogOffset();
                 }
 
                 long startTime = System.currentTimeMillis();
@@ -231,6 +232,10 @@ public class TransactionRecordFlush2DBService extends ServiceThread {
                 if (addSuccess && (removeSuccess = transactionStore.confirm(new ArrayList<>(confirmTrs.keySet())))) {
                     log.info("pull TransactionRecord consume {}ms ,size={},realParpareSize={},realConfirmSize:{}",
                             (System.currentTimeMillis() - startTime), requests.requestlist.size(), prepareTrs.size(), confirmTrs.size());
+                    //更新最新的offset
+                    if (transactionOffset > 0) {
+                        transactionOffsetConifgService.putOffset(transactionOffset);
+                    }
                     break;
                 }
             } catch (Throwable e) {
