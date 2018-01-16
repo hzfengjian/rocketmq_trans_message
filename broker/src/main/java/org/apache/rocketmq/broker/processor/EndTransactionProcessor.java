@@ -37,6 +37,8 @@ import org.apache.rocketmq.store.PutMessageResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
+
 public class EndTransactionProcessor implements NettyRequestProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(LoggerName.TRANSACTION_LOGGER_NAME);
     private final BrokerController brokerController;
@@ -50,7 +52,6 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
         final EndTransactionRequestHeader requestHeader =
                 (EndTransactionRequestHeader) request.decodeCommandCustomHeader(EndTransactionRequestHeader.class);
-        boolean redrictNewMsgFlag = false;
         if (requestHeader.getFromTransactionCheck()) {
             switch (requestHeader.getCommitOrRollback()) {
                 case MessageSysFlag.TRANSACTION_NOT_TYPE: {
@@ -65,7 +66,6 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
                         LOGGER.info("maxPhyOffset={} - commitLogOffset={} more than mapedFileSize {}," +
                                         "rollback the original message and put a new commitlog",
                                 maxPhyOffset, requestHeader.getCommitLogOffset(), mapedFileSize);
-                        redrictNewMsgFlag = true;
                     } else {
                         return null;
                     }
@@ -100,16 +100,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
                             RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
                             requestHeader.toString(),
                             request.getRemark());
-                    long maxPhyOffset = this.brokerController.getMessageStore().getMaxPhyOffset();
-                    long mapedFileSize = this.brokerController.getMessageStoreConfig().getMapedFileSizeCommitLog();
-                    if (maxPhyOffset - requestHeader.getCommitLogOffset() > mapedFileSize) {
-                        LOGGER.info("maxPhyOffset={} - commitLogOffset={} more than mapedFileSize {}," +
-                                        "rollback the original message and put a new commitlog",
-                                maxPhyOffset, requestHeader.getCommitLogOffset(), mapedFileSize);
-                        redrictNewMsgFlag = true;
-                    } else {
-                        return null;
-                    }
+                    return null;
                 }
 
                 case MessageSysFlag.TRANSACTION_COMMIT_TYPE: {
@@ -152,12 +143,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
 
             MessageExtBrokerInner msgInner = this.endMessageTransaction(msgExt);
 
-            //TRANSACTION_NOT_TYPE
-            if (redrictNewMsgFlag) {
-                msgInner.setSysFlag(MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), MessageSysFlag.TRANSACTION_PREPARED_TYPE));
-            } else {
-                msgInner.setSysFlag(MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), requestHeader.getCommitOrRollback()));
-            }
+            msgInner.setSysFlag(MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), requestHeader.getCommitOrRollback()));
             msgInner.setQueueOffset(requestHeader.getTranStateTableOffset());
             msgInner.setPreparedTransactionOffset(requestHeader.getCommitLogOffset());
             msgInner.setStoreTimestamp(msgExt.getStoreTimestamp());

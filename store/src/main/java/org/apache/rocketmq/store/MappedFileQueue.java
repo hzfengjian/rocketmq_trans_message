@@ -367,6 +367,8 @@ public class MappedFileQueue {
                             break;
                         }
                     }
+                } else {
+                    log.info("file {} can't be deleted,because contanins smallest offset:{}", mappedFile.getFileName(), minTransOffset);
                 }
             }
         }
